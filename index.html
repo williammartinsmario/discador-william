@@ -116,7 +116,18 @@
                 alert('Telefone inválido: ' + c.telefone);
                 return;
             }
-            window.open(`tel:${telLink}`, '_self');
+            window.open(`tel:${telLink}`, '_self');// Alternar cor do botão
+const botao = e.target;
+if (!botao.dataset.clicked || botao.dataset.clicked === 'false') {
+    botao.style.backgroundColor = '#4CAF50'; // verde
+    botao.style.color = 'white';
+    botao.dataset.clicked = 'true';
+} else {
+    botao.style.backgroundColor = ''; // volta ao padrão
+    botao.style.color = '';
+    botao.dataset.clicked = 'false';
+}
+
             // Adiciona contato na lista de tentativas com status vazio, observação vazia e timestamp
             const now = new Date().toISOString();
             attempts.push({nome: c.nome, telefone: c.telefone, status: '', observacao: '', data: now});
