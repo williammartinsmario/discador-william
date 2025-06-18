@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Discador Automático William</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { margin: 5px; padding: 10px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .green-lamp { color: green; font-weight: bold; }
+        .red-lamp { color: red; font-weight: bold; }
+        textarea { width: 95%; height: 50px; }
+    </style>
+</head>
+<body>
+    <h1>Discador Automático William</h1>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <button id="exportListBtn" disabled>Exportar Tentativas</button>
+    <button id="exportHistoryBtn" disabled>Gerar Histórico</button>
+    <button id="clearStorageBtn">Limpar Dados</button>
+    <h2>Lista Principal</h2>
+    <table id="mainTable">
+        <thead><tr><th>Nome</th><th>Telefone</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Lista de Tentativas</h2>
+    <table id="attemptsTable">
+        <thead><tr><th>Nome</th><th>Telefone</th><th>Status</th><th>Observação</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+(() => {
+    let contacts = [];
+    let attempts = JSON.parse(localStorage.getItem('attempts')) || [];
+    const fileInput = document.getElementById('fileInput');
+    const mainTableBody = document.querySelector('#mainTable tbody');
+    const attemptsTableBody = document.querySelector('#attemptsTable tbody');
+    const exportListBtn = document.getElementById('exportListBtn');
+    const exportHistoryBtn = document.getElementById('exportHistoryBtn');
+    const clearStorageBtn = document.getElementById('clearStorageBtn');
+
+    // Função para formatar telefone e gerar link com regra "0 antes do DDD se não for 19"
+    function formatLink(tel) {
+        tel = tel.replace(/\D/g, ''); // Só números
+        if (tel.length < 10) return null; // inválido
+        const ddd = tel.length === 10 ? tel.slice(0, 2) : tel.length === 11 ? tel.slice(0, 2) : null;
+        if (!ddd) return null;
+        if (ddd !== '19') {
+            return '+05' + tel; // adiciona 0 antes do DDD e +55 país
+        } else {
+            return '+55' + tel;
+        }
+    }
+
+    // Carregar contatos na tabela principal
+    function loadMainTable() {
+        mainTableBody.innerHTML = '';
+        contacts.forEach((c, i) => {
+            const tr = document.createElement('tr');
+            const link = formatLink(c.telefone);
+            tr.innerHTML = `
+                <td>${c.nome}</td>
+                <td>${c.telefone}</td>
+                <td><button data-index="${i}">Ligar</button></td>
+            `;
+            mainTableBody.appendChild(tr);
+        });
+        // Habilitar/desabilitar botões
+        exportListBtn.disabled = attempts.length === 0;
+        exportHistoryBtn.disabled = attempts.length === 0;
+    }
+
+    // Carregar tentativas na tabela lateral
+    function loadAttemptsTable() {
+        attemptsTableBody.innerHTML = '';
+        attempts.forEach((a, i) => {
+            const tr = document.createElement('tr');
+            const statusLamp = a.status === 'atendeu' ? '<span class="green-lamp">&#128161;</span>' :
+                a.status === 'caixa' ? '<span class="red-lamp">&#128308;</span>' : '';
+            tr.innerHTML = `
+                <td>${a.nome}</td>
+                <td>${a.telefone}</td>
+                <td>${statusLamp}</td>
+                <td><textarea data-index="${i}" class="obs-text">${a.observacao || ''}</textarea></td>
+                <td>
+                    <button data-index="${i}" class="btn-atendeu">Atendeu</button>
+                    <button data-index="${i}" class="btn-caixa">Caixa Postal</button>
+                    <button data-index="${i}" class="btn-voltar">Voltar</button>
+                </td>
+            `;
+            attemptsTableBody.appendChild(tr);
+        });
+        exportListBtn.disabled = attempts.length === 0;
+        exportHistoryBtn.disabled = attempts.length === 0;
+    }
+
+    // Atualizar localStorage
+    function saveAttempts() {
+        localStorage.setItem('attempts', JSON.stringify(attempts));
+    }
+
+    // Eventos da tabela principal - botão ligar
+    mainTableBody.addEventListener('click', e => {
+        if (e.target.tagName === 'BUTTON') {
+            const i = e.target.getAttribute('data-index');
+            const c = contacts[i];
+            // Gera o link e abre discador
+            const telLink = formatLink(c.telefone);
+            if (!telLink) {
+                alert('Telefone inválido: ' + c.telefone);
+                return;
+            }
+            window.open(`tel:${telLink}`, '_self');
+            // Adiciona contato na lista de tentativas com status vazio, observação vazia e timestamp
+            const now = new Date().toISOString();
+            attempts.push({nome: c.nome, telefone: c.telefone, status: '', observacao: '', data: now});
+            saveAttempts();
+            loadAttemptsTable();
+            loadMainTable();
+        }
+    });
+
+    // Eventos da tabela tentativas (status, voltar, observação)
+    attemptsTableBody.addEventListener('click', e => {
+        const i = e.target.getAttribute('data-index');
+        if (!i) return;
+        if (e.target.classList.contains('btn-atendeu')) {
+            attempts[i].status = 'atendeu';
+            saveAttempts();
+            loadAttemptsTable();
+        } else if (e.target.classList.contains('btn-caixa')) {
+            attempts[i].status = 'caixa';
+            saveAttempts();
+            loadAttemptsTable();
+        } else if (e.target.classList.contains('btn-voltar')) {
+            // Voltar para lista principal e remover da tentativa
+            const contato = attempts.splice(i, 1)[0];
+            // opcional: evitar duplicatas no main
+            if (!contacts.find(c => c.nome === contato.nome && c.telefone === contato.telefone)) {
+                contacts.push(contato);
+            }
+            saveAttempts();
+            loadAttemptsTable();
+            loadMainTable();
+        }
+    });
+
+    // Atualizar observação ao digitar
+    attemptsTableBody.addEventListener('input', e => {
+        if (e.target.classList.contains('obs-text')) {
+            const i = e.target.getAttribute('data-index');
+            attempts[i].observacao = e.target.value;
+            saveAttempts();
+        }
+    });
+
+    // Exportar lista lateral para Excel (Tentativas)
+    exportListBtn.addEventListener('click', () => {
+        if (attempts.length === 0) {
+            alert('Nenhuma tentativa para exportar.');
+            return;
+        }
+        const ws = XLSX.utils.json_to_sheet(attempts.map(a => ({
+            Nome: a.nome,
+            Telefone: a.telefone,
+            Status: a.status === 'atendeu' ? 'Atendeu' : (a.status === 'caixa' ? 'Caixa Postal' : ''),
+            Observação: a.observacao,
+            Data: a.data
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Tentativas');
+        XLSX.writeFile(wb, 'Tentativas.xlsx');
+    });
+
+    // Exportar histórico completo para Excel
+    exportHistoryBtn.addEventListener('click', () => {
+        if (attempts.length === 0) {
+            alert('Nenhuma ligação no histórico.');
+            return;
+        }
+        // Para este exemplo histórico é o mesmo que tentativas atuais (salvo no localStorage)
+        const ws = XLSX.utils.json_to_sheet(attempts.map(a => ({
+            Nome: a.nome,
+            Telefone: a.telefone,
+            Status: a.status === 'atendeu' ? 'Atendeu' : (a.status === 'caixa' ? 'Caixa Postal' : ''),
+            Observação: a.observacao,
+            Data: a.data
+        })));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Histórico de Ligações');
+        XLSX.writeFile(wb, 'Historico_Ligacoes.xlsx');
+    });
+
+    // Limpar dados locais
+    clearStorageBtn.addEventListener('click', () => {
+        if (confirm('Deseja limpar todas as tentativas e contatos carregados?')) {
+            localStorage.removeItem('attempts');
+            contacts = [];
+            attempts = [];
+            loadMainTable();
+            loadAttemptsTable();
+            fileInput.value = '';
+            exportListBtn.disabled = true;
+            exportHistoryBtn.disabled = true;
+        }
+    });
+
+    // Ler Excel e importar contatos
+    fileInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {defval: ''});
+            // Espera colunas Nome e Telefone
+            contacts = jsonData.filter(r => r.Nome && r.Telefone).map(r => ({nome: r.Nome, telefone: String(r.Telefone)}));
+            attempts = JSON.parse(localStorage.getItem('attempts')) || [];
+            loadMainTable();
+            loadAttemptsTable();
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // Inicializar
+    loadMainTable();
+    loadAttemptsTable();
+})();
+</script>
+</body>
+</html>
