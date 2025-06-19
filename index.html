@@ -6,7 +6,7 @@
   <title>Discador Automático William</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    button { margin: 5px; padding: 10px; }
+    button { margin: 5px; padding: 10px; cursor: pointer; }
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     .green-lamp { color: green; font-weight: bold; }
@@ -60,8 +60,8 @@
       }
       window.open(\`tel:\${link}\`, '_self');
       const botao = e.target;
-      botao.style.backgroundColor = '#e60000';
-      botao.style.color = 'white';
+      botao.style.setProperty('background-color', '#e60000', 'important');
+      botao.style.setProperty('color', 'white', 'important');
       botao.textContent = 'Ligado';
       botao.disabled = true;
     }
