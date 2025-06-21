@@ -3,88 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Discador Automático William</title>
+  <title>Discador William Atualizado</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    button { margin: 5px; padding: 10px; cursor: pointer; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    .green-lamp { color: green; font-weight: bold; }
-    .red-lamp { color: red; font-weight: bold; }
-    textarea { width: 95%; height: 50px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    button {
+      margin: 5px;
+      padding: 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      transition: background-color 0.3s ease;
+    }
+
+    button.ativo {
+      background-color: red !important;
+    }
   </style>
 </head>
 <body>
-<h1>Discador Automático William</h1>
-<input type="file" id="fileInput" accept=".xlsx,.xls" />
-<table id="mainTable">
-  <thead><tr><th>Nome</th><th>Telefone</th><th>Ações</th></tr></thead>
-  <tbody></tbody>
-</table>
+  <h1>Discador William Atualizado</h1>
+  <button id="botaoLigar">Ligar</button>
 
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-<script>
-(() => {
-  const fileInput = document.getElementById('fileInput');
-  const mainTableBody = document.querySelector('#mainTable tbody');
-  let contacts = [];
-
-  function formatLink(tel) {
-    tel = tel.replace(/\D/g, '');
-    if (tel.length < 10) return null;
-    const ddd = tel.slice(0, 2);
-    return (ddd !== '19' ? '+050' : '+55') + tel;
-  }
-
-  function loadMainTable() {
-    mainTableBody.innerHTML = '';
-    contacts.forEach((c, i) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = \`
-        <td>\${c.nome}</td>
-        <td>\${c.telefone}</td>
-        <td><button data-index="\${i}" class="ligarBtn">Ligar</button></td>
-      \`;
-      mainTableBody.appendChild(tr);
+  <script>
+    const botao = document.getElementById("botaoLigar");
+    botao.addEventListener("click", () => {
+      botao.classList.toggle("ativo");
     });
-  }
-
-  mainTableBody.addEventListener('click', e => {
-    if (e.target.classList.contains('ligarBtn')) {
-      const i = e.target.getAttribute('data-index');
-      const c = contacts[i];
-      const link = formatLink(c.telefone);
-      if (!link) {
-        alert('Telefone inválido.');
-        return;
-      }
-      window.open(\`tel:\${link}\`, '_self');
-      const botao = e.target;
-      botao.style.setProperty('background-color', '#e60000', 'important');
-      botao.style.setProperty('color', 'white', 'important');
-      botao.textContent = 'Ligado';
-      botao.disabled = true;
-    }
-  });
-
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      const data = new Uint8Array(evt.target.result);
-      const workbook = XLSX.read(data, {type: 'array'});
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(sheet, {defval: ''});
-      contacts = json.filter(r => r.Nome && r.Telefone).map(r => ({
-        nome: r.Nome,
-        telefone: String(r.Telefone)
-      }));
-      loadMainTable();
-    };
-    reader.readAsArrayBuffer(file);
-  });
-})();
-</script>
+  </script>
 </body>
 </html>
